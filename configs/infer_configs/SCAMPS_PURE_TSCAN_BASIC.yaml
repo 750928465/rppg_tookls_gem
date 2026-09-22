@@ -8,8 +8,8 @@ TEST:
     DATASET: PURE
     DO_PREPROCESS: False                    # if first time, should be true
     DATA_FORMAT: NDCHW
-    DATA_PATH: "/gscratch/ubicomp/xliu0/data3/mnt/Datasets/PURE/RawData"                     # Raw dataset path, need to be updated
-    CACHED_PATH: "/gscratch/ubicomp/xliu0/data3/mnt/Datasets/rppg_toolbox/PreprocessedData"    # Processed dataset save path, need to be updated
+    DATA_PATH: "/mnt/gemlab_data/Natural_video_database/rPPG_Adult/PURE/PURE"                     # Raw dataset path, need to be updated
+    CACHED_PATH: "/data/zhoubin/cache_rppg"    # Processed dataset save path, need to be updated
     EXP_DATA_NAME: ""
     BEGIN: 0.0
     END: 1.0
@@ -33,7 +33,7 @@ TEST:
 DEVICE: cuda:0
 NUM_OF_GPU_TRAIN: 1
 LOG:
-  PATH: runs/exp
+  PATH: "/data/zhoubin/out_rppg"
 MODEL:
   DROP_RATE: 0.2
   NAME: Tscan
