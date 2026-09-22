@@ -222,7 +222,11 @@ class BaseLoader(Dataset):
         print("Total Number of raw files preprocessed:", len(data_dirs_split), end='\n\n')
 
     def preprocess(self, frames, bvps, config_preprocess):
-        """Preprocesses a pair of data.
+        """把原始视频和同步 PPG 标签转换为模型可直接读取的 clip。
+
+        对 TS-CAN 而言，本方法对应论文进入网络之前的关键准备：裁剪面部、调整空间
+        分辨率、生成相邻帧归一化差分、生成外观表示、处理 PPG 标签并切分时间窗口。
+        具体操作由 YAML 的 PREPROCESS 字段控制，并非所有模型都执行同一组合。
 
         Args:
             frames(np.array): Frames in a video.
@@ -232,7 +236,8 @@ class BaseLoader(Dataset):
             frame_clips(np.array): processed video data by frames
             bvps_clips(np.array): processed bvp (ppg) labels by frames
         """
-        # resize frames and crop for face region
+        # 第1步：定位面部区域并调整到 YAML 指定尺寸。
+        # 论文实验为36x36；Toolbox中的TS-CAN示例通常使用72x72，复现时应记录实际配置。
         frames = self.crop_face_resize(
             frames,
             config_preprocess.CROP_FACE.DO_CROP_FACE,
@@ -244,19 +249,27 @@ class BaseLoader(Dataset):
             config_preprocess.CROP_FACE.DETECTION.USE_MEDIAN_FACE_BOX,
             config_preprocess.RESIZE.W,
             config_preprocess.RESIZE.H)
-        # Check data transformation type
+        # 第2步：依照 DATA_TYPE 顺序生成一种或多种视频表示。
+        # TS-CAN 通常设置 ['DiffNormalized', 'Standardized']；顺序不能随意交换，
+        # 因为 TS_CAN.forward 固定把前3通道当 Motion、后3通道当 Appearance。
         data = list()  # Video data
         for data_type in config_preprocess.DATA_TYPE:
             f_c = frames.copy()
             if data_type == "Raw":
+                # 不变换像素，通常供传统无监督 rPPG 方法使用。
                 data.append(f_c)
             elif data_type == "DiffNormalized":
+                # Motion branch 输入：实现论文的相邻帧归一化差分。
                 data.append(BaseLoader.diff_normalize_data(f_c))
             elif data_type == "Standardized":
+                # Appearance branch 输入：Toolbox对逐帧序列整体做Z-score。
+                # 论文文字描述的是窗口平均外观帧，这是论文与当前实现的一处差异。
                 data.append(BaseLoader.standardized_data(f_c))
             else:
                 raise ValueError("Unsupported data type!")
-        data = np.concatenate(data, axis=-1)  # concatenate all channels
+        # 第3步：沿通道维拼接。RGB差分3通道 + RGB外观3通道 = TS-CAN的6通道输入。
+        data = np.concatenate(data, axis=-1)
+        # 第4步：用与任务配置一致的方式处理接触式 PPG/BVP 标签。
         if config_preprocess.LABEL_TYPE == "Raw":
             pass
         elif config_preprocess.LABEL_TYPE == "DiffNormalized":
@@ -266,7 +279,8 @@ class BaseLoader(Dataset):
         else:
             raise ValueError("Unsupported label type!")
 
-        if config_preprocess.DO_CHUNK:  # chunk data into snippets
+        # 第5步：按 CHUNK_LENGTH 切成不重叠 clip；剩余不足一个 clip 的尾帧会被丢弃。
+        if config_preprocess.DO_CHUNK:
             frames_clips, bvps_clips = self.chunk(
                 data, bvps, config_preprocess.CHUNK_LENGTH)
         else:
@@ -598,31 +612,47 @@ class BaseLoader(Dataset):
 
     @staticmethod
     def diff_normalize_data(data):
-        """Calculate discrete difference in video data along the time-axis and nornamize by its standard deviation."""
+        """生成 TS-CAN Motion branch 的相邻帧归一化差分。
+
+        论文 Sec. 4 的公式为 (c(t+1)-c(t))/(c(t)+c(t+1))，目的是削弱绝对亮度与
+        静态肤色的影响。本实现随后再除以整段差分的标准差，并补一个零帧保持长度不变。
+        """
         n, h, w, c = data.shape
         diffnormalized_len = n - 1
         diffnormalized_data = np.zeros((diffnormalized_len, h, w, c), dtype=np.float32)
         diffnormalized_data_padding = np.zeros((1, h, w, c), dtype=np.float32)
         for j in range(diffnormalized_len):
+            # 1e-7 只用于数值稳定，防止两个像素值之和为零。
             diffnormalized_data[j, :, :, :] = (data[j + 1, :, :, :] - data[j, :, :, :]) / (
                     data[j + 1, :, :, :] + data[j, :, :, :] + 1e-7)
+        # Toolbox附加的全局标准差归一化；这一步应与 checkpoint 的预处理保持一致。
         diffnormalized_data = diffnormalized_data / np.std(diffnormalized_data)
+        # 相邻差分只有 n-1 项，在末尾补零，使视频和标签仍按 n 帧对齐。
         diffnormalized_data = np.append(diffnormalized_data, diffnormalized_data_padding, axis=0)
         diffnormalized_data[np.isnan(diffnormalized_data)] = 0
         return diffnormalized_data
 
     @staticmethod
     def diff_normalize_label(label):
-        """Calculate discrete difference in labels along the time-axis and normalize by its standard deviation."""
+        """对同步 PPG/BVP 标签做一阶差分和标准差归一化。
+
+        TS-CAN 因而学习波形的相对变化而非原始幅值；测试后处理必须知道标签属于
+        DiffNormalized 类型，才能按相应方式恢复/评价频率信息。
+        """
         diff_label = np.diff(label, axis=0)
         diffnormalized_label = diff_label / np.std(diff_label)
+        # 与视频差分相同，在末尾补零以维持逐帧对齐。
         diffnormalized_label = np.append(diffnormalized_label, np.zeros(1), axis=0)
         diffnormalized_label[np.isnan(diffnormalized_label)] = 0
         return diffnormalized_label
 
     @staticmethod
     def standardized_data(data):
-        """Z-score standardization for video data."""
+        """生成 Toolbox 版本 TS-CAN 的 Appearance branch 输入。
+
+        对整个输入视频数组使用单个均值和标准差做 Z-score；这里没有实现论文所述的
+        N帧平均外观图，因此比较论文与Toolbox时应明确记录这一实现差异。
+        """
         data = data - np.mean(data)
         data = data / np.std(data)
         data[np.isnan(data)] = 0
