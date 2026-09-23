@@ -45,7 +45,9 @@ class TscanTrainer(BaseTrainer):
         if config.TOOLBOX_MODE == "train_and_test":
             # 训练模式使用 TRAIN 预处理尺寸构造模型。
             self.model = TSCAN(frame_depth=self.frame_depth, img_size=config.TRAIN.DATA.PREPROCESS.RESIZE.H).to(self.device)
-            self.model = torch.nn.DataParallel(self.model, device_ids=list(range(config.NUM_OF_GPU_TRAIN)))
+            # 单卡运行：沿用 YAML 的 DEVICE 编号，NUM_OF_GPU_TRAIN 应设为 1。
+            self.model = torch.nn.DataParallel(
+                self.model, device_ids=[self.device.index], output_device=self.device.index)
 
             self.num_train_batches = len(data_loader["train"])
             # Toolbox 差异：这里是单任务逐帧 MSE；论文 Eq. (8) 是 BVP+呼吸的多任务 L1。
@@ -59,7 +61,9 @@ class TscanTrainer(BaseTrainer):
         elif config.TOOLBOX_MODE == "only_test":
             # 仅测试模式使用 TEST 预处理尺寸，随后在 test() 中加载 MODEL_PATH。
             self.model = TSCAN(frame_depth=self.frame_depth, img_size=config.TEST.DATA.PREPROCESS.RESIZE.H).to(self.device)
-            self.model = torch.nn.DataParallel(self.model, device_ids=list(range(config.NUM_OF_GPU_TRAIN)))
+            # 仅测试时同样使用 YAML 的 DEVICE，保持模型和输入位于同一张 GPU。
+            self.model = torch.nn.DataParallel(
+                self.model, device_ids=[self.device.index], output_device=self.device.index)
         else:
             raise ValueError("TS-CAN trainer initialized in incorrect toolbox mode!")
 

@@ -65,7 +65,7 @@ VALID:
         W: 72
 TEST:
   METRICS: ['MAE', 'RMSE', 'MAPE', 'Pearson', 'SNR', 'BA']
-  USE_LAST_EPOCH: True                      # to use provided validation dataset to find the best epoch, should be false
+  USE_LAST_EPOCH: False                      # to use provided validation dataset to find the best epoch, should be false
   DATA:
     FILTERING:
       USE_EXCLUSION_LIST: True
@@ -107,7 +107,7 @@ TEST:
       RESIZE:
         H: 72
         W: 72
-DEVICE: cuda:0
+DEVICE: cuda:2
 NUM_OF_GPU_TRAIN: 1
 LOG:
   PATH: "/data/zhoubin/out_rppg"

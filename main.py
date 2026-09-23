@@ -38,7 +38,7 @@ def seed_worker(worker_id):
 def add_args(parser):
     """Adds arguments for parser."""
     parser.add_argument('--config_file', required=False,
-                        default="configs/train_configs/PURE_PURE_UBFC-rPPG_TSCAN_BASIC.yaml", type=str, help="The name of the model.")
+                        default="configs/train_configs/PURE_PURE_UBFC-PHYS_TSCAN_BASIC.yaml", type=str, help="The name of the model.")
     '''Neural Method Sample YAML LIST:
       SCAMPS_SCAMPS_UBFC-rPPG_TSCAN_BASIC.yaml
       SCAMPS_SCAMPS_UBFC-rPPG_DEEPPHYS_BASIC.yaml
@@ -89,7 +89,7 @@ def train_and_test(config, data_loader_dict):
     model_trainer.test(data_loader_dict)
 
 
-def test(config, data_loader_dict):
+def test_model(config, data_loader_dict):
     """Tests the model."""
     if config.MODEL.NAME == "Physnet":
         model_trainer = trainer.PhysnetTrainer.PhysnetTrainer(config, data_loader_dict)
@@ -191,7 +191,7 @@ if __name__ == "__main__":
                 device=config.DEVICE)
             data_loader_dict['train'] = DataLoader(
                 dataset=train_data_loader,
-                num_workers=16,
+                num_workers=8,
                 batch_size=config.TRAIN.BATCH_SIZE,
                 shuffle=True,
                 worker_init_fn=seed_worker,
@@ -338,7 +338,7 @@ if __name__ == "__main__":
     if config.TOOLBOX_MODE == "train_and_test":
         train_and_test(config, data_loader_dict)
     elif config.TOOLBOX_MODE == "only_test":
-        test(config, data_loader_dict)
+        test_model(config, data_loader_dict)
     elif config.TOOLBOX_MODE == "unsupervised_method":
         unsupervised_method_inference(config, data_loader_dict)
     else:
