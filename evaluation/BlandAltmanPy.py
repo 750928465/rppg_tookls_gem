@@ -114,6 +114,7 @@ class BlandAltman():
         plt.xlim(measure_lower_lim, measure_upper_lim)
         plt.ylim(measure_lower_lim, measure_upper_lim)
         plt.savefig(os.path.join(self.save_path, file_name),bbox_inches='tight', dpi=300)
+        plt.savefig(os.path.join(self.save_path, os.path.splitext(file_name)[0] + '.svg'),bbox_inches='tight', dpi=300)
         print(f"Saved {file_name} to {self.save_path}.")
 
     def difference_plot(self,x_label='Difference between rPPG HR and ECG HR [bpm]',
@@ -145,4 +146,5 @@ class BlandAltman():
             ax.legend()
         ax.grid()
         plt.savefig(os.path.join(self.save_path, file_name),bbox_inches='tight', dpi=100)
+        plt.savefig(os.path.join(self.save_path, os.path.splitext(file_name)[0] + '.svg'),bbox_inches='tight', dpi=100)
         print(f"Saved {file_name} to {self.save_path}.")

@@ -85,6 +85,7 @@ class BaseTrainer:
 
         loss_plot_filename = os.path.join(output_dir, filename_id + '_losses.pdf')
         plt.savefig(loss_plot_filename, dpi=300)
+        plt.savefig(os.path.splitext(loss_plot_filename)[0] + '.svg', dpi=300)
         plt.close()
 
         # Create a separate plot for learning rates
@@ -103,6 +104,7 @@ class BaseTrainer:
 
         lr_plot_filename = os.path.join(output_dir, filename_id + '_learning_rates.pdf')
         plt.savefig(lr_plot_filename, bbox_inches='tight', dpi=300)
+        plt.savefig(os.path.splitext(lr_plot_filename)[0] + '.svg', bbox_inches='tight', dpi=300)
         plt.close()
 
         print('Saving plots of losses and learning rates to:', output_dir)
