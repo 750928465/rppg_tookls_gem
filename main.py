@@ -89,7 +89,7 @@ def train_and_test(config, data_loader_dict):
     model_trainer.test(data_loader_dict)
 
 
-def test_model(config, data_loader_dict):
+def run_model_test(config, data_loader_dict):
     """Tests the model."""
     if config.MODEL.NAME == "Physnet":
         model_trainer = trainer.PhysnetTrainer.PhysnetTrainer(config, data_loader_dict)
@@ -338,7 +338,7 @@ if __name__ == "__main__":
     if config.TOOLBOX_MODE == "train_and_test":
         train_and_test(config, data_loader_dict)
     elif config.TOOLBOX_MODE == "only_test":
-        test_model(config, data_loader_dict)
+        run_model_test(config, data_loader_dict)
     elif config.TOOLBOX_MODE == "unsupervised_method":
         unsupervised_method_inference(config, data_loader_dict)
     else:
