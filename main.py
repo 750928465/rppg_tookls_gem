@@ -63,7 +63,9 @@ def add_args(parser):
 
 def train_and_test(config, data_loader_dict):
     """Trains the model."""
-    if config.MODEL.NAME == "Physnet":
+    if config.MODEL.NAME == "PhaseShiftedRPPG":
+        model_trainer = trainer.PhaseShiftedRPPGTrainer.PhaseShiftedRPPGTrainer(config, data_loader_dict)
+    elif config.MODEL.NAME == "Physnet":
         model_trainer = trainer.PhysnetTrainer.PhysnetTrainer(config, data_loader_dict)
     elif config.MODEL.NAME == "iBVPNet":
         model_trainer = trainer.iBVPNetTrainer.iBVPNetTrainer(config, data_loader_dict)
@@ -91,7 +93,9 @@ def train_and_test(config, data_loader_dict):
 
 def run_model_test(config, data_loader_dict):
     """Tests the model."""
-    if config.MODEL.NAME == "Physnet":
+    if config.MODEL.NAME == "PhaseShiftedRPPG":
+        model_trainer = trainer.PhaseShiftedRPPGTrainer.PhaseShiftedRPPGTrainer(config, data_loader_dict)
+    elif config.MODEL.NAME == "Physnet":
         model_trainer = trainer.PhysnetTrainer.PhysnetTrainer(config, data_loader_dict)
     elif config.MODEL.NAME == "iBVPNet":
         model_trainer = trainer.iBVPNetTrainer.iBVPNetTrainer(config, data_loader_dict)    
@@ -148,13 +152,18 @@ if __name__ == "__main__":
 
     # configurations.
     config = get_config(args)
+    if config.MODEL.NAME == "PhaseShiftedRPPG":
+        # Reject incompatible pressure-label/shape settings before preprocessing.
+        trainer.PhaseShiftedRPPGTrainer.PhaseShiftedRPPGTrainer.validate_config(config)
     print('Configuration:')
     print(config, end='\n\n')
 
     data_loader_dict = dict() # dictionary of data loaders 
     if config.TOOLBOX_MODE == "train_and_test":
         # train_loader
-        if config.TRAIN.DATA.DATASET == "UBFC-rPPG":
+        if config.TRAIN.DATA.DATASET == "MCD-rPPG":
+            train_loader = data_loader.MCDRPPGLoader.MCDRPPGLoader
+        elif config.TRAIN.DATA.DATASET == "UBFC-rPPG":
             train_loader = data_loader.UBFCrPPGLoader.UBFCrPPGLoader
         elif config.TRAIN.DATA.DATASET == "PURE":
             train_loader = data_loader.PURELoader.PURELoader
@@ -194,6 +203,7 @@ if __name__ == "__main__":
                 num_workers=8,
                 batch_size=config.TRAIN.BATCH_SIZE,
                 shuffle=True,
+                drop_last=config.TRAIN.DATA.DATASET == 'MCD-rPPG',
                 worker_init_fn=seed_worker,
                 generator=train_generator
             )
@@ -201,7 +211,9 @@ if __name__ == "__main__":
             data_loader_dict['train'] = None
 
         # valid_loader
-        if config.VALID.DATA.DATASET == "UBFC-rPPG":
+        if config.VALID.DATA.DATASET == "MCD-rPPG":
+            valid_loader = data_loader.MCDRPPGLoader.MCDRPPGLoader
+        elif config.VALID.DATA.DATASET == "UBFC-rPPG":
             valid_loader = data_loader.UBFCrPPGLoader.UBFCrPPGLoader
         elif config.VALID.DATA.DATASET == "PURE":
             valid_loader = data_loader.PURELoader.PURELoader
@@ -240,7 +252,7 @@ if __name__ == "__main__":
             data_loader_dict["valid"] = DataLoader(
                 dataset=valid_data,
                 num_workers=16,
-                batch_size=config.TRAIN.BATCH_SIZE,  # batch size for val is the same as train
+                batch_size=1 if config.VALID.DATA.DATASET == 'MCD-rPPG' else config.TRAIN.BATCH_SIZE,
                 shuffle=False,
                 worker_init_fn=seed_worker,
                 generator=general_generator
@@ -250,7 +262,9 @@ if __name__ == "__main__":
 
     if config.TOOLBOX_MODE == "train_and_test" or config.TOOLBOX_MODE == "only_test":
         # test_loader
-        if config.TEST.DATA.DATASET == "UBFC-rPPG":
+        if config.TEST.DATA.DATASET == "MCD-rPPG":
+            test_loader = data_loader.MCDRPPGLoader.MCDRPPGLoader
+        elif config.TEST.DATA.DATASET == "UBFC-rPPG":
             test_loader = data_loader.UBFCrPPGLoader.UBFCrPPGLoader
         elif config.TEST.DATA.DATASET == "PURE":
             test_loader = data_loader.PURELoader.PURELoader

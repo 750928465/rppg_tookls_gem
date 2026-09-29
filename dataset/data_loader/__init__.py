@@ -1,4 +1,5 @@
 import dataset.data_loader.BaseLoader
+import dataset.data_loader.MCDRPPGLoader
 import dataset.data_loader.COHFACELoader
 import dataset.data_loader.UBFCrPPGLoader
 import dataset.data_loader.PURELoader

@@ -1,0 +1,84 @@
+# Architecture template only. Dataset access, synchronization, labels and subject
+# splits are not verified. FULL/STAGE2 need a future BP label adapter; the current
+# BP4DPlus loader returns one waveform, not the required abp/sbp/dbp dictionary.
+# LABEL_SOURCE=UNVERIFIED deliberately stops main.py before dataset construction.
+BASE: ['']
+TOOLBOX_MODE: train_and_test
+TRAIN:
+  BATCH_SIZE: 8
+  EPOCHS: 50
+  LR: 0.001
+  MODEL_FILE_NAME: PhaseShiftedRPPG
+  PLOT_LOSSES_AND_LR: False
+  DATA:
+    FS: 25
+    DATASET: BP4DPlus
+    DATA_PATH: ''
+    CACHED_PATH: PreprocessedData/PhaseShiftedRPPG
+    DO_PREPROCESS: False
+    DATA_FORMAT: NCDHW
+    BEGIN: 0.0
+    END: 0.7
+    PREPROCESS:
+      DATA_TYPE: ['Raw']
+      LABEL_TYPE: Raw
+      USE_PSUEDO_PPG_LABEL: False
+      CHUNK_LENGTH: 150
+      RESIZE:
+        H: 128
+        W: 128
+VALID:
+  DATA:
+    FS: 25
+    DATASET: BP4DPlus
+    DATA_PATH: ''
+    CACHED_PATH: PreprocessedData/PhaseShiftedRPPG
+    DO_PREPROCESS: False
+    DATA_FORMAT: NCDHW
+    BEGIN: 0.7
+    END: 0.85
+    PREPROCESS:
+      DATA_TYPE: ['Raw']
+      LABEL_TYPE: Raw
+      USE_PSUEDO_PPG_LABEL: False
+      CHUNK_LENGTH: 150
+      RESIZE:
+        H: 128
+        W: 128
+TEST:
+  USE_LAST_EPOCH: False
+  DATA:
+    FS: 25
+    DATASET: BP4DPlus
+    DATA_PATH: ''
+    CACHED_PATH: PreprocessedData/PhaseShiftedRPPG
+    DO_PREPROCESS: False
+    DATA_FORMAT: NCDHW
+    BEGIN: 0.85
+    END: 1.0
+    PREPROCESS:
+      DATA_TYPE: ['Raw']
+      LABEL_TYPE: Raw
+      USE_PSUEDO_PPG_LABEL: False
+      CHUNK_LENGTH: 150
+      RESIZE:
+        H: 128
+        W: 128
+MODEL:
+  NAME: PhaseShiftedRPPG
+  PHASE_SHIFTED_RPPG:
+    TRAIN_STAGE: FULL
+    LABEL_SOURCE: UNVERIFIED
+    STAGE1_CHECKPOINT: ''
+    FRAME_NUM: 150
+    RESAMPLE_FACTOR: 4
+    VIDEO_CHANNEL_ORDER: RGB
+    PIXEL_SCALE: 255.0
+    STAGE2_EPOCHS: 200
+    STAGE2_LR: 0.001
+    LR_DECAY: 0.99
+INFERENCE:
+  BATCH_SIZE: 1  # Upstream final inference is one clip per batch.
+  MODEL_PATH: ''
+DEVICE: cpu  # Choose the actual server device later, without changing the model.
+NUM_OF_GPU_TRAIN: 1
