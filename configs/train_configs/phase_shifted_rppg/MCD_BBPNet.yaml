@@ -11,14 +11,14 @@ MODEL:
   PHASE_SHIFTED_RPPG:
     TRAIN_STAGE: STAGE2
     # INPUT: copy the exact DRPNet_STAGE1_Best.pth path printed by command 1.
-    STAGE1_CHECKPOINT: /CHANGE_ME/runs/phase_shifted/drpnet/weights/DRPNet_STAGE1_Best.pth
+    STAGE1_CHECKPOINT: /data/zhoubin/out_rppg/Phys_shifted/drpnet/weights/DRPNet_STAGE1_Best.pth
     # OUTPUT: explicit directories; change these to keep independent experiment runs.
-    CHECKPOINT_DIR: /CHANGE_ME/runs/phase_shifted/bbpnet/weights
-    RESULT_DIR: /CHANGE_ME/runs/phase_shifted/bbpnet/results
+    CHECKPOINT_DIR: /data/zhoubin/out_rppg/Phys_shifted/bbpnet/weights
+    RESULT_DIR: /data/zhoubin/out_rppg/Phys_shifted/bbpnet/results
     PREVIEW_WINDOWS: 3
     # Best BBP-only checkpoint: CHECKPOINT_DIR/BBPNet_STAGE2_Best.pth
     # Best paired DRP+BBP checkpoint: CHECKPOINT_DIR/BBPNet_FULL_Best.pth
 INFERENCE:
   # For only_test: this BBP-only file + STAGE1_CHECKPOINT identify the two networks.
-  MODEL_PATH: /CHANGE_ME/runs/phase_shifted/bbpnet/weights/BBPNet_STAGE2_Best.pth
+  MODEL_PATH: /data/zhoubin/out_rppg/Phys_shifted/bbpnet/weights/BBPNet_STAGE2_Best.pth
   # To use FULL_Best.pth instead, also set STAGE1_CHECKPOINT: '' above.

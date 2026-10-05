@@ -9,8 +9,8 @@ TRAIN:
   DATA:
     FS: 25
     DATASET: MCD-rPPG
-    DATA_PATH: &data_root /CHANGE_ME/mcd_rppg
-    CACHED_PATH: &cache_root /CHANGE_ME/cache/mcd_phase_shifted
+    DATA_PATH: &data_root /mnt/gemlab_data/Natural_video_database/rPPG_Adult/mcd_rppg
+    CACHED_PATH: &cache_root /data/zhoubin/cache_rppg/Phys_shifted
     EXP_DATA_NAME: MCD_PPG_CUFF_v1
     DO_PREPROCESS: True
     DATA_FORMAT: NCDHW
@@ -87,7 +87,7 @@ MODEL:
 INFERENCE:
   BATCH_SIZE: 1
   MODEL_PATH: ''
-DEVICE: cuda:0
+DEVICE: cuda:1
 NUM_OF_GPU_TRAIN: 1
 LOG:
-  PATH: /CHANGE_ME/runs
+  PATH: /data/zhoubin/out_rppg/Phys_shifted

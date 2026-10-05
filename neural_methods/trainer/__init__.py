@@ -13,3 +13,4 @@ import neural_methods.trainer.RhythmFormerTrainer
 import neural_methods.trainer.FactorizePhysTrainer
 import neural_methods.trainer.PhaseShiftedRPPGTrainer
 import neural_methods.trainer.phase_shifted_rppg
+import neural_methods.trainer.phase_shifted_rppg

@@ -11,10 +11,10 @@ MODEL:
   PHASE_SHIFTED_RPPG:
     TRAIN_STAGE: STAGE1
     # Explicit directories: used directly, without LOG.PATH / EXP_DATA_NAME prefixes.
-    CHECKPOINT_DIR: /CHANGE_ME/runs/phase_shifted/drpnet/weights
-    RESULT_DIR: /CHANGE_ME/runs/phase_shifted/drpnet/results
+    CHECKPOINT_DIR: /data/zhoubin/out_rppg/Phys_shifted/drpnet/weights
+    RESULT_DIR: /data/zhoubin/out_rppg/Phys_shifted/drpnet/results
     PREVIEW_WINDOWS: 3  # SVG previews of the first N test windows; 0 disables previews.
     # Best checkpoint: CHECKPOINT_DIR/DRPNet_STAGE1_Best.pth
 INFERENCE:
   # Used only with TOOLBOX_MODE: only_test.
-  MODEL_PATH: /CHANGE_ME/runs/phase_shifted/drpnet/weights/DRPNet_STAGE1_Best.pth
+  MODEL_PATH: /data/zhoubin/out_rppg/Phys_shifted/drpnet/weights/DRPNet_STAGE1_Best.pth
