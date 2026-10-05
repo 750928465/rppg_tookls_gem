@@ -4,12 +4,12 @@ TRAIN:
   BATCH_SIZE: 4
   EPOCHS: 30
   LR: 9e-3
-  MODEL_FILE_NAME: PURE_PURE_UBFC_physnet_diffnormalized
+  MODEL_FILE_NAME: PURE_PURE_UBFC-PHYS_physnet_diffnormalized
   PLOT_LOSSES_AND_LR: True
   DATA:
     FS: 30
     DATASET: PURE
-    DO_PREPROCESS: False            # if first time, should be true
+    DO_PREPROCESS: True             # first run: generate PhysNet cache; set False for reruns
     DATA_FORMAT: NCDHW
     DATA_PATH: "/mnt/gemlab_data/Natural_video_database/rPPG_Adult/PURE/PURE"                     # Raw dataset path, need to be updated
     CACHED_PATH: "/data/zhoubin/cache_rppg"    # Processed dataset save path, need to be updated
@@ -38,7 +38,7 @@ VALID:
   DATA:
     FS: 30
     DATASET: PURE
-    DO_PREPROCESS: False                # if first time, should be true
+    DO_PREPROCESS: True                 # first run: generate PhysNet cache; set False for reruns
     DATA_FORMAT: NCDHW
     DATA_PATH: "/mnt/gemlab_data/Natural_video_database/rPPG_Adult/PURE/PURE"                     # Raw dataset path, need to be updated
     CACHED_PATH: "/data/zhoubin/cache_rppg"    # Processed dataset save path, need to be updated
@@ -65,7 +65,7 @@ VALID:
         W: 72
 TEST:
   METRICS: ['MAE', 'RMSE', 'MAPE', 'Pearson', 'SNR', 'BA']
-  USE_LAST_EPOCH: True                   # to use provided validation dataset to find the best epoch, should be false
+  USE_LAST_EPOCH: False                  # select the best epoch using validation loss
   DATA:
     FILTERING:
       USE_EXCLUSION_LIST: True
@@ -83,7 +83,7 @@ TEST:
       TASK_LIST: ['T1', 'T2', 'T3']
     FS: 35
     DATASET: UBFC-PHYS
-    DO_PREPROCESS: False                  # if first time, should be true
+    DO_PREPROCESS: True                   # first run: generate PhysNet cache; set False for reruns
     DATA_FORMAT: NCDHW
     DATA_PATH: "/mnt/gemlab_data/Natural_video_database/rPPG_Adult/UBFC-Phys"                     # Raw dataset path, need to be updated
     CACHED_PATH: "/data/zhoubin/cache_rppg"    # Processed dataset save path, need to be updated
@@ -107,7 +107,7 @@ TEST:
       RESIZE:
         H: 72
         W: 72
-DEVICE: cuda:0
+DEVICE: cuda:2
 NUM_OF_GPU_TRAIN: 1
 LOG:
   PATH: "/data/zhoubin/out_rppg"

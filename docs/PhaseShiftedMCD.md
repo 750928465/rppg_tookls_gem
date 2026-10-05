@@ -1,5 +1,8 @@
 # Phase-Shifted rPPG：MCD 数据接入与远程运行
 
+2026-10-05：新增两个独立 Trainer 与阶段 YAML。先观察 DRPNet 结果再手动启动 BBPNet，
+请使用 [分阶段运行说明](PhaseShiftedStages.md)。本文中 FULL 命令保留为兼容的自动两阶段入口。
+
 更新：2026-09-29。已实现代码适配，未训练、未报告真实数据精度。
 这是 **PPG + 袖带 BP 监督的改编实验**，不等同于原论文连续 ABP 监督的复现。
 

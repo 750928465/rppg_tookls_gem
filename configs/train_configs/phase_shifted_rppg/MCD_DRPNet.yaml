@@ -1,0 +1,20 @@
+# Command 1: train/evaluate DRPNet, inspect waveforms and HR before Stage 2.
+# Edit shared data/cache/device settings in MCD_COMMON.yaml.
+BASE: ['MCD_COMMON.yaml']
+TOOLBOX_MODE: train_and_test  # Change to only_test to evaluate MODEL_PATH without training.
+TRAIN:
+  EPOCHS: 20
+  LR: 0.001
+  MODEL_FILE_NAME: DRPNet
+MODEL:
+  NAME: DRPNet
+  PHASE_SHIFTED_RPPG:
+    TRAIN_STAGE: STAGE1
+    # Explicit directories: used directly, without LOG.PATH / EXP_DATA_NAME prefixes.
+    CHECKPOINT_DIR: /CHANGE_ME/runs/phase_shifted/drpnet/weights
+    RESULT_DIR: /CHANGE_ME/runs/phase_shifted/drpnet/results
+    PREVIEW_WINDOWS: 3  # SVG previews of the first N test windows; 0 disables previews.
+    # Best checkpoint: CHECKPOINT_DIR/DRPNet_STAGE1_Best.pth
+INFERENCE:
+  # Used only with TOOLBOX_MODE: only_test.
+  MODEL_PATH: /CHANGE_ME/runs/phase_shifted/drpnet/weights/DRPNet_STAGE1_Best.pth

@@ -1,0 +1,93 @@
+# Shared data/split/architecture settings for the separate DRPNet and BBPNet trainers.
+# Edit dataset/cache paths here once; both stage YAMLs inherit the same subject split.
+# Run MCD_DRPNet.yaml or MCD_BBPNet.yaml, rather than this base file.
+BASE: ['']
+TOOLBOX_MODE: train_and_test
+TRAIN:
+  BATCH_SIZE: 2
+  PLOT_LOSSES_AND_LR: True
+  DATA:
+    FS: 25
+    DATASET: MCD-rPPG
+    DATA_PATH: &data_root /CHANGE_ME/mcd_rppg
+    CACHED_PATH: &cache_root /CHANGE_ME/cache/mcd_phase_shifted
+    EXP_DATA_NAME: MCD_PPG_CUFF_v1
+    DO_PREPROCESS: True
+    DATA_FORMAT: NCDHW
+    BEGIN: 0.0
+    END: 0.7
+    MCD: &mcd_policy
+      CAMERAS: [FullHDwebcam]
+      SPLIT_SEED: 100
+      MAX_SYNC_ERROR: 0.02
+      MAX_FRAME_GAP: 0.10
+      MAX_TAIL_DROP: 32
+    PREPROCESS:
+      DATA_TYPE: [Raw]
+      LABEL_TYPE: Raw
+      USE_PSUEDO_PPG_LABEL: False
+      DO_CHUNK: True
+      CHUNK_LENGTH: 150
+      RESIZE: {H: 128, W: 128}
+VALID:
+  DATA:
+    FS: 25
+    DATASET: MCD-rPPG
+    DATA_PATH: *data_root
+    CACHED_PATH: *cache_root
+    EXP_DATA_NAME: MCD_PPG_CUFF_v1
+    DO_PREPROCESS: True
+    DATA_FORMAT: NCDHW
+    BEGIN: 0.7
+    END: 0.85
+    MCD: *mcd_policy
+    PREPROCESS:
+      DATA_TYPE: [Raw]
+      LABEL_TYPE: Raw
+      USE_PSUEDO_PPG_LABEL: False
+      DO_CHUNK: True
+      CHUNK_LENGTH: 150
+      RESIZE: {H: 128, W: 128}
+TEST:
+  USE_LAST_EPOCH: False
+  DATA:
+    FS: 25
+    DATASET: MCD-rPPG
+    DATA_PATH: *data_root
+    CACHED_PATH: *cache_root
+    EXP_DATA_NAME: MCD_PPG_CUFF_v1
+    DO_PREPROCESS: True
+    DATA_FORMAT: NCDHW
+    BEGIN: 0.85
+    END: 1.0
+    MCD: *mcd_policy
+    PREPROCESS:
+      DATA_TYPE: [Raw]
+      LABEL_TYPE: Raw
+      USE_PSUEDO_PPG_LABEL: False
+      DO_CHUNK: True
+      CHUNK_LENGTH: 150
+      RESIZE: {H: 128, W: 128}
+MODEL:
+  NAME: ''  # Selected by the stage YAML.
+  PHASE_SHIFTED_RPPG:
+    TRAIN_STAGE: STAGE1
+    LABEL_SOURCE: PPG_CUFF
+    PREPROCESS_VERSION: mcd_ppg_cuff_v1
+    FRAME_NUM: 150
+    RESAMPLE_FACTOR: 4
+    VIDEO_CHANNEL_ORDER: RGB
+    PIXEL_SCALE: 255.0
+    STAGE2_WAVEFORM_WEIGHT: 0.0  # CuffBPLoss skips the ABP branch entirely.
+    # Predeclared broad ranges, not fitted to held-out targets. Do not clip labels.
+    SBP_MIN: 60.0
+    SBP_MAX: 240.0
+    DBP_MIN: 30.0
+    DBP_MAX: 140.0
+INFERENCE:
+  BATCH_SIZE: 1
+  MODEL_PATH: ''
+DEVICE: cuda:0
+NUM_OF_GPU_TRAIN: 1
+LOG:
+  PATH: /CHANGE_ME/runs

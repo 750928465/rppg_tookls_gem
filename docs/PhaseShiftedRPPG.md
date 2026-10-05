@@ -1,5 +1,8 @@
 # Phase-Shifted rPPG 源码接入与 Review
 
+2026-10-05：独立 DRPNet / BBPNet Trainer 位于 `neural_methods/trainer/phase_shifted_rppg/`，
+分阶段命令、权重路径和结果输出见 [PhaseShiftedStages.md](PhaseShiftedStages.md)。
+
 2026-09-29 更新：新增 MCD 的 `PPG_CUFF` 适配、专用 Loader、袖带监督及无标签视频推理。
 当前使用方法和验证边界见 [PhaseShiftedMCD.md](PhaseShiftedMCD.md)。以下记录原始 ABP 分支
 在 2026-09-24 的接入，不应把其中“尚无适配器”的历史状态用于判断新增 MCD 分支。

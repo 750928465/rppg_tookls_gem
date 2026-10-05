@@ -38,7 +38,7 @@ def seed_worker(worker_id):
 def add_args(parser):
     """Adds arguments for parser."""
     parser.add_argument('--config_file', required=False,
-                        default="configs/train_configs/PURE_PURE_UBFC-PHYS_TSCAN_BASIC.yaml", type=str, help="The name of the model.")
+                        default="configs/train_configs/PURE_PURE_UBFC-PHYS_TSCAN_BASIC.yaml", type=str, help="Path to the YAML configuration for the model and dataset.")
     '''Neural Method Sample YAML LIST:
       SCAMPS_SCAMPS_UBFC-rPPG_TSCAN_BASIC.yaml
       SCAMPS_SCAMPS_UBFC-rPPG_DEEPPHYS_BASIC.yaml
@@ -54,16 +54,30 @@ def add_args(parser):
       UBFC-rPPG_UBFC-rPPG_PURE_DEEPPHYS_BASIC.yaml
       UBFC-rPPG_UBFC-rPPG_PURE_PHYSNET_BASIC.yaml
       MMPD_MMPD_UBFC-rPPG_TSCAN_BASIC.yaml
+      MCD_MCD_MCD_PHASE_SHIFTED.yaml
+      phase_shifted_rppg/MCD_DRPNet.yaml (Stage 1: video -> rPPG/HR)
+      phase_shifted_rppg/MCD_BBPNet.yaml (Stage 2: frozen DRPNet -> BP)
+      PHASE_SHIFTED_RPPG_TEMPLATE.yaml (requires verified ABP labels before use)
     Unsupervised Method Sample YAML LIST:
       PURE_UNSUPERVISED.yaml
       UBFC-rPPG_UNSUPERVISED.yaml
     '''
+    # PhaseShiftedRPPG uses the same --config_file entry point as other models:
+    # python main.py --config_file configs/train_configs/phase_shifted_rppg/MCD_DRPNet.yaml
+    # python main.py --config_file configs/train_configs/phase_shifted_rppg/MCD_BBPNet.yaml
+    # YAML MODEL.NAME selects the trainer; MODEL.PHASE_SHIFTED_RPPG holds its settings.
     return parser
 
 
 def train_and_test(config, data_loader_dict):
     """Trains the model."""
-    if config.MODEL.NAME == "PhaseShiftedRPPG":
+    if config.MODEL.NAME == "DRPNet":
+        model_trainer = trainer.phase_shifted_rppg.DRPNetTrainer(config, data_loader_dict)
+    elif config.MODEL.NAME == "BBPNet":
+        model_trainer = trainer.phase_shifted_rppg.BBPNetTrainer(config, data_loader_dict)
+    elif config.MODEL.NAME == "PhaseShiftedRPPG":
+        # One trainer manages DRPNet and BBPNet through the common train/test API.
+        # TRAIN.EPOCHS/LR configure Stage 1; MODEL.PHASE_SHIFTED_RPPG configures Stage 2.
         model_trainer = trainer.PhaseShiftedRPPGTrainer.PhaseShiftedRPPGTrainer(config, data_loader_dict)
     elif config.MODEL.NAME == "Physnet":
         model_trainer = trainer.PhysnetTrainer.PhysnetTrainer(config, data_loader_dict)
@@ -93,7 +107,12 @@ def train_and_test(config, data_loader_dict):
 
 def run_model_test(config, data_loader_dict):
     """Tests the model."""
-    if config.MODEL.NAME == "PhaseShiftedRPPG":
+    if config.MODEL.NAME == "DRPNet":
+        model_trainer = trainer.phase_shifted_rppg.DRPNetTrainer(config, data_loader_dict)
+    elif config.MODEL.NAME == "BBPNet":
+        model_trainer = trainer.phase_shifted_rppg.BBPNetTrainer(config, data_loader_dict)
+    elif config.MODEL.NAME == "PhaseShiftedRPPG":
+        # only_test loads INFERENCE.MODEL_PATH; TRAIN_STAGE selects waveform or BP evaluation.
         model_trainer = trainer.PhaseShiftedRPPGTrainer.PhaseShiftedRPPGTrainer(config, data_loader_dict)
     elif config.MODEL.NAME == "Physnet":
         model_trainer = trainer.PhysnetTrainer.PhysnetTrainer(config, data_loader_dict)
@@ -152,8 +171,12 @@ if __name__ == "__main__":
 
     # configurations.
     config = get_config(args)
-    if config.MODEL.NAME == "PhaseShiftedRPPG":
-        # Reject incompatible pressure-label/shape settings before preprocessing.
+    if config.MODEL.NAME in ("DRPNet", "BBPNet"):
+        # Validate the stage and checkpoint path before decoding or caching data.
+        stage_trainer = getattr(trainer.phase_shifted_rppg, config.MODEL.NAME + 'Trainer')
+        stage_trainer.validate_config(config)
+    elif config.MODEL.NAME == "PhaseShiftedRPPG":
+        # Check ABP_MMHG/PPG_CUFF supervision and video shapes before preprocessing.
         trainer.PhaseShiftedRPPGTrainer.PhaseShiftedRPPGTrainer.validate_config(config)
     print('Configuration:')
     print(config, end='\n\n')
@@ -203,7 +226,8 @@ if __name__ == "__main__":
                 num_workers=8,
                 batch_size=config.TRAIN.BATCH_SIZE,
                 shuffle=True,
-                drop_last=config.TRAIN.DATA.DATASET == 'MCD-rPPG',
+                # MCD Stage 2 uses BatchNorm: exclude a potentially single-sample final batch.
+                drop_last=config.TRAIN.DATA.DATASET == 'MCD-rPPG' and config.MODEL.NAME != 'DRPNet',
                 worker_init_fn=seed_worker,
                 generator=train_generator
             )
@@ -252,6 +276,7 @@ if __name__ == "__main__":
             data_loader_dict["valid"] = DataLoader(
                 dataset=valid_data,
                 num_workers=16,
+                # Match MCD inference batch size because the original model standardizes across a batch.
                 batch_size=1 if config.VALID.DATA.DATASET == 'MCD-rPPG' else config.TRAIN.BATCH_SIZE,
                 shuffle=False,
                 worker_init_fn=seed_worker,
