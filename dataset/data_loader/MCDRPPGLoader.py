@@ -5,6 +5,7 @@ from collections import Counter
 from pathlib import Path
 
 import numpy as np
+from tqdm import tqdm
 from dataset.data_loader.BaseLoader import BaseLoader
 from dataset.mcd_preprocessing import inventory, split_subjects, aligned_clips, cache_signature, VERSION
 
@@ -22,6 +23,7 @@ class MCDRPPGLoader(BaseLoader):
                 p.CHUNK_LENGTH != 150 or p.RESIZE.H != 128 or p.RESIZE.W != 128 or
                 config_data.FS != 25 or not p.DO_CHUNK or list(p.DATA_AUG) != ['None']):
             raise ValueError('MCD v1 requires Raw RGB/PPG, NCDHW, 25 Hz, 150 frames, 128x128, no augmentation.')
+        print(f'MCD {name}: scanning recordings in {data_path}', flush=True)
         rows, missing = inventory(data_path, tuple(m.CAMERAS))
         self.rows = split_subjects(rows, config_data.BEGIN, config_data.END, m.SPLIT_SEED)
         self.subject_ids = {r['patient_id'] for r in self.rows}
@@ -35,28 +37,52 @@ class MCDRPPGLoader(BaseLoader):
         self.cached_path = str(Path(config_data.CACHED_PATH) / signature[:16])
         directory = Path(self.cached_path)
         manifest = directory / f'{name}_manifest.json'
+        print(f'MCD {name}: {len(self.subject_ids)} subjects, {len(self.rows)} videos; '
+              f'cache={directory}', flush=True)
         if config_data.DO_PREPROCESS and not manifest.exists():
             directory.mkdir(parents=True, exist_ok=True)
+            print(f'MCD {name}: no completed manifest; processing all videos in this split. '
+                  'Existing window files do not provide per-video resume.', flush=True)
             entries, audit = [], []
-            for row in self.rows:
-                clips, info = aligned_clips(row, **params)
-                audit.append(dict(info, recording_id=row['recording_id']))
-                for video, ppg, times, chunk, sync_error in clips:
-                    stem = f"{row['recording_id']}_chunk{chunk}"
-                    np.save(directory / f'{stem}_input.npy', video)
-                    np.savez_compressed(directory / f'{stem}_label.npz', ppg=ppg,
-                                        sbp=np.float32(row['sbp'] if row['bp_valid'] else 0),
-                                        dbp=np.float32(row['dbp'] if row['bp_valid'] else 0),
-                                        bp_valid=np.bool_(row['bp_valid']), time=times,
-                                        max_sync_error=np.float32(sync_error))
-                    entries.append({'stem': stem, 'recording_id': row['recording_id'],
-                                    'group_id': row['group_id'], 'subject_id': row['patient_id'],
-                                    'chunk': chunk, 'bp_valid': row['bp_valid']})
+            rejected_windows = 0
+            # Count a video only after its accepted windows have been saved.
+            with tqdm(total=len(self.rows), desc=f'MCD {name} preprocessing',
+                      unit='video', dynamic_ncols=True) as progress:
+                for row in self.rows:
+                    progress.set_postfix(video=row['recording_id'], saved=len(entries),
+                                         rejected=rejected_windows)
+                    try:
+                        clips, info = aligned_clips(row, **params)
+                        audit.append(dict(info, recording_id=row['recording_id']))
+                        for video, ppg, times, chunk, sync_error in clips:
+                            stem = f"{row['recording_id']}_chunk{chunk}"
+                            np.save(directory / f'{stem}_input.npy', video)
+                            np.savez_compressed(directory / f'{stem}_label.npz', ppg=ppg,
+                                                sbp=np.float32(row['sbp'] if row['bp_valid'] else 0),
+                                                dbp=np.float32(row['dbp'] if row['bp_valid'] else 0),
+                                                bp_valid=np.bool_(row['bp_valid']), time=times,
+                                                max_sync_error=np.float32(sync_error))
+                            entries.append({'stem': stem, 'recording_id': row['recording_id'],
+                                            'group_id': row['group_id'], 'subject_id': row['patient_id'],
+                                            'chunk': chunk, 'bp_valid': row['bp_valid']})
+                    except Exception as exc:
+                        tqdm.write(f"MCD {name}: failed recording={row['recording_id']}; "
+                                   f"video={row['video']}; {type(exc).__name__}: {exc}",
+                                   file=progress.fp)
+                        raise
+                    rejected_windows += len(info['rejected'])
+                    progress.set_postfix(video=row['recording_id'], saved=len(entries),
+                                         rejected=rejected_windows, refresh=False)
+                    progress.update(1)
             payload = {'signature': signature, 'version': VERSION, 'params': params,
                        'entries': entries, 'audit': audit, 'missing_files': missing}
             temporary = manifest.with_suffix('.tmp')
             temporary.write_text(json.dumps(payload, indent=2))
             temporary.replace(manifest)
+            print(f'MCD {name}: preprocessing finished; saved={len(entries)}, '
+                  f'rejected={rejected_windows}; manifest={manifest}', flush=True)
+        elif manifest.exists():
+            print(f'MCD {name}: loading existing manifest={manifest}', flush=True)
         if not manifest.exists():
             raise ValueError(f'Cache absent: {manifest}. Run preprocessing on the server first.')
         payload = json.loads(manifest.read_text())
