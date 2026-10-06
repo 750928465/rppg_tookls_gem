@@ -398,6 +398,7 @@ _C.INFERENCE.MODEL_PATH = ''
 # MCD-specific parameters are copied into each split; other datasets ignore them.
 _C.TRAIN.DATA.MCD = CN()
 _C.TRAIN.DATA.MCD.CAMERAS = ['FullHDwebcam']
+_C.TRAIN.DATA.MCD.CLEAN_MANIFEST = ''
 _C.TRAIN.DATA.MCD.SPLIT_SEED = 100
 _C.TRAIN.DATA.MCD.MAX_SYNC_ERROR = 0.02
 _C.TRAIN.DATA.MCD.MAX_FRAME_GAP = 0.10

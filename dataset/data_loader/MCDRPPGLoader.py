@@ -8,6 +8,7 @@ import numpy as np
 from tqdm import tqdm
 from dataset.data_loader.BaseLoader import BaseLoader
 from dataset.mcd_preprocessing import inventory, split_subjects, aligned_clips, cache_signature, VERSION
+from dataset.mcd.cleaning import atomic_json, load_clean_manifest
 
 
 class MCDRPPGLoader(BaseLoader):
@@ -24,7 +25,16 @@ class MCDRPPGLoader(BaseLoader):
                 config_data.FS != 25 or not p.DO_CHUNK or list(p.DATA_AUG) != ['None']):
             raise ValueError('MCD v1 requires Raw RGB/PPG, NCDHW, 25 Hz, 150 frames, 128x128, no augmentation.')
         print(f'MCD {name}: scanning recordings in {data_path}', flush=True)
-        rows, missing = inventory(data_path, tuple(m.CAMERAS))
+        clean_manifest = getattr(m, 'CLEAN_MANIFEST', '')
+        self.clean_signature = None
+        if clean_manifest:
+            rows, cleaned = load_clean_manifest(clean_manifest, data_path, tuple(m.CAMERAS))
+            self.clean_signature = cleaned['signature']
+            missing = []
+            print(f'MCD {name}: accepted cleaning manifest={clean_manifest}; '
+                  f'{len(rows)} approved recordings', flush=True)
+        else:
+            rows, missing = inventory(data_path, tuple(m.CAMERAS))
         self.rows = split_subjects(rows, config_data.BEGIN, config_data.END, m.SPLIT_SEED)
         self.subject_ids = {r['patient_id'] for r in self.rows}
         if not self.rows:
@@ -37,6 +47,14 @@ class MCDRPPGLoader(BaseLoader):
         self.cached_path = str(Path(config_data.CACHED_PATH) / signature[:16])
         directory = Path(self.cached_path)
         manifest = directory / f'{name}_manifest.json'
+        # Persist the seed and actual assignment separately from face processing.
+        directory.mkdir(parents=True, exist_ok=True)
+        atomic_json(directory / f'{name}_split.json', {
+            'algorithm': 'sorted_subjects_numpy_default_rng_v1',
+            'seed': m.SPLIT_SEED, 'begin': config_data.BEGIN, 'end': config_data.END,
+            'clean_manifest_signature': self.clean_signature,
+            'subjects': sorted(self.subject_ids),
+            'recordings': [r['recording_id'] for r in self.rows]})
         print(f'MCD {name}: {len(self.subject_ids)} subjects, {len(self.rows)} videos; '
               f'cache={directory}', flush=True)
         if config_data.DO_PREPROCESS and not manifest.exists():

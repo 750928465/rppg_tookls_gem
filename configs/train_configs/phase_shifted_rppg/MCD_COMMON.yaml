@@ -18,6 +18,8 @@ TRAIN:
     END: 0.7
     MCD: &mcd_policy
       CAMERAS: [FullHDwebcam]
+      # Run python -m dataset.mcd before training. All stages use this same audit.
+      CLEAN_MANIFEST: /data/zhoubin/cache_rppg/mcd_clean/accepted_manifest.json
       SPLIT_SEED: 100
       MAX_SYNC_ERROR: 0.02
       MAX_FRAME_GAP: 0.10

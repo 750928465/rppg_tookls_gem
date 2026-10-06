@@ -109,7 +109,7 @@ def sample_indices(t, grid):
     return np.where(grid-t[left] <= t[right]-grid, left, right)
 
 
-def decode_faces(path, expected=None, max_tail_drop=32):
+def decode_faces(path, expected=None, max_tail_drop=32, approval=None):
     """Strict FFmpeg decode, streamed through an OpenCV Haar face cropper.
 
     A corrupt suffix is tolerated ONLY when an expected ppg_sync length exists
@@ -125,13 +125,18 @@ def decode_faces(path, expected=None, max_tail_drop=32):
     cap.release()
     if width <= 0 or height <= 0:
         raise ValueError(f'Cannot read video dimensions: {path}')
+    if approval and (width != approval['width'] or height != approval['height']):
+        raise ValueError('Video dimensions differ from the cleaning approval.')
     cascade = Path(__file__).parent / 'haarcascade_frontalface_default.xml'
     detector = cv2.CascadeClassifier(str(cascade))
     if detector.empty():
         raise RuntimeError(f'Cannot load face detector: {cascade}')
     command = ['ffmpeg', '-nostdin', '-hide_banner', '-v', 'error', '-xerror',
                '-threads', '1', '-i', str(path), '-map', '0:v:0', '-an',
-               '-vsync', '0', '-pix_fmt', 'rgb24', '-f', 'rawvideo', 'pipe:1']
+               '-vsync', '0']
+    if approval:
+        command += ['-frames:v', str(approval['frames'])]
+    command += ['-pix_fmt', 'rgb24', '-f', 'rawvideo', 'pipe:1']
     faces, valid, box = [], [], None
     with tempfile.TemporaryFile() as errors:
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=errors)
@@ -170,7 +175,13 @@ def decode_faces(path, expected=None, max_tail_drop=32):
     count = len(faces)
     if count < 2:
         raise ValueError(f'No usable decoded frames: {message}')
-    if expected is not None:
+    if approval:
+        # Only a verified, unchanged source may use an approved prefix. The
+        # demuxer may still read the bad tail ahead; never accept extra frames.
+        if count != approval['frames'] or expected is None or count > expected:
+            raise ValueError(f'Approved prefix unavailable: decoded={count}, '
+                             f"approved={approval['frames']}, reference={expected}. {message}")
+    elif expected is not None:
         if not 0 <= expected-count <= max_tail_drop:
             raise ValueError(f'Decode/PPG count mismatch: decoded={count}, PPG={expected}. {message}')
         if code and count == expected:
@@ -181,13 +192,18 @@ def decode_faces(path, expected=None, max_tail_drop=32):
         'decoded_frames': count, 'expected_frames': expected,
         'dropped_suffix': expected-count if expected is not None else 0,
         'ffmpeg_returncode': code, 'decoder_message': message,
+        'clean_approval': approval,
     }
 
 
 def aligned_clips(row, fs=25, length=150, max_sync_error=.02,
                   max_frame_gap=.10, max_tail_drop=32):
     t, ppg, error, meta_extra = read_sync(row)
-    frames, face_valid, _, audit = decode_faces(row['video'], len(t), max_tail_drop)
+    if 'clean_approval' in row:
+        frames, face_valid, _, audit = decode_faces(row['video'], len(t), max_tail_drop,
+                                                   approval=row['clean_approval'])
+    else:
+        frames, face_valid, _, audit = decode_faces(row['video'], len(t), max_tail_drop)
     n = len(frames)
     t, ppg, error = t[:n], ppg[:n], error[:n]
     grid = regular_grid(t, fs)
@@ -218,6 +234,8 @@ def cache_signature(rows, params):
     sources = []
     for row in rows:
         sources.append({k: row[k] for k in ('recording_id', 'sbp', 'dbp')})
+        if 'clean_approval' in row:
+            sources.append(row['clean_approval'])
         for key in ('video', 'meta', 'ppg', 'ppg_sync'):
             p = Path(row[key]); stat = p.stat()
             sources.append([str(p), stat.st_size, stat.st_mtime_ns])

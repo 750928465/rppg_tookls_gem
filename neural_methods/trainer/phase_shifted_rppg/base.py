@@ -80,6 +80,8 @@ class PhaseShiftedTrainerBase(BaseTrainer):
                 for key in ('CAMERAS', 'SPLIT_SEED', 'MAX_SYNC_ERROR', 'MAX_FRAME_GAP', 'MAX_TAIL_DROP'):
                     if getattr(data.MCD, key) != getattr(config.TEST.DATA.MCD, key):
                         raise ValueError(f'MCD {key} must match across active splits.')
+                if getattr(data.MCD, 'CLEAN_MANIFEST', '') != getattr(config.TEST.DATA.MCD, 'CLEAN_MANIFEST', ''):
+                    raise ValueError('MCD CLEAN_MANIFEST must match across active splits.')
             if data.DATA_FORMAT != 'NCDHW':
                 raise ValueError(f'{split}: use NCDHW [B,3,T,H,W]; no implicit permutation is performed.')
             if pre.RESIZE.H != 128 or pre.RESIZE.W != 128 or pre.CHUNK_LENGTH != p.FRAME_NUM:
