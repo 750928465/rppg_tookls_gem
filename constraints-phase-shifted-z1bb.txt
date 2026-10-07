@@ -1,0 +1,7 @@
+# Preserve the versions reported as already installed in the user's z1bb env.
+# Constraints do not install these packages; conflicting dependencies must fail
+# instead of replacing the existing Torch/CUDA or NumPy installation.
+torch==2.14.1+cu130
+torchvision==0.29.1+cu130
+numpy==2.4.6
+torchaudio==2.11.0+cu130

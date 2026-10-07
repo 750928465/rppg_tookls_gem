@@ -1,0 +1,25 @@
+# Additional dependencies for the existing z1bb environment (Python >=3.11).
+# FIRST install torchaudio 2.11.0+cu130 from the official cu130 wheel index.
+# TorchAudio 2.11 uses the stable ABI and supports Torch >=2.11, including 2.14.
+# Do not also install the old requirements-phase-shifted.txt baseline.
+-c constraints-phase-shifted-z1bb.txt
+
+# NumPy 2.4.6 is already installed; retain it through the constraints above.
+scipy==1.17.1
+pandas==2.3.3
+matplotlib==3.10.8
+opencv-python-headless==4.13.0.92
+PyYAML==6.0.3
+yacs==0.1.8
+tqdm==4.67.1
+
+# These are imported eagerly by the current Toolbox main.py registration path.
+h5py==3.15.1
+mat73==0.65
+scikit-image==0.26.0
+scikit-learn==1.8.0
+neurokit2==0.2.13
+timm==1.0.30
+
+# Direct package metadata verified; full Linux installation/runtime still needs
+# pip check and tools/check_phase_shifted_env.py. FFmpeg/tmux are external tools.
