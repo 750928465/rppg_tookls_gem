@@ -1,0 +1,6 @@
+# Separate conversion environment, verified on Python 3.12 / macOS arm64.
+tensorflow==2.21.0
+torch==2.11.0
+numpy==2.5.4
+scipy==1.17.1
+opencv-python-headless==4.13.0.92

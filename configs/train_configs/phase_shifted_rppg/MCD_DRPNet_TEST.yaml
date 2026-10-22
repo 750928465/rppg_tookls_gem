@@ -1,0 +1,12 @@
+# Evaluate the saved validation-best DRPNet; no training or cache rebuilding.
+BASE: ['MCD_DRPNet.yaml']
+TOOLBOX_MODE: only_test
+TEST:
+  DATA:
+    DO_PREPROCESS: False
+MODEL:
+  PHASE_SHIFTED_RPPG:
+    # Keep this rerun separate from training outputs and earlier diagnostics.
+    RESULT_DIR: /home/zhoubin/out_rppg/Phys_shifted/drpnet/results/test_fixed
+INFERENCE:
+  MODEL_PATH: /home/zhoubin/out_rppg/Phys_shifted/drpnet/weights/DRPNet_STAGE1_Best.pth

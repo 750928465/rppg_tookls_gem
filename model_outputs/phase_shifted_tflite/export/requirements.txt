@@ -1,0 +1,5 @@
+# Python 3.12 recommended; CPU inference only, no PyTorch needed.
+tensorflow==2.21.0
+numpy>=2.0,<2.6
+scipy>=1.15,<1.18
+opencv-python-headless==4.13.0.92
